@@ -45,13 +45,7 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
         Player player = event.getPlayer();
         if (!verifiedPlayers.contains(player.getUniqueId())) {
             securedPlayers.add(player.getUniqueId());
-            boolean hasBlindness = false;
-            for (PotionEffect potionEffect : player.getActivePotionEffects())
-                if (potionEffect.getType().equals(PotionEffectType.BLINDNESS)) {
-                    hasBlindness = true;
-                    break;
-                }
-            if (!hasBlindness)
+            if (player.hasPotionEffect(PotionEffectType.BLINDNESS))
                 player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40,
                         255, true, false));
 
