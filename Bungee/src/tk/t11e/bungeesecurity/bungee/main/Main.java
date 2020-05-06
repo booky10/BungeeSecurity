@@ -1,7 +1,10 @@
 package tk.t11e.bungeesecurity.bungee.main;
 // Created by booky10 in BungeeSecurity (20:38 05.05.20)
 
-import net.md_5.bungee.api.event.ServerConnectEvent;
+import com.google.common.io.ByteArrayDataInput;
+import com.google.common.io.ByteStreams;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
+import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.config.Configuration;
@@ -15,7 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-@SuppressWarnings({"ResultOfMethodCallIgnored", "BusyWait"})
+@SuppressWarnings({"ResultOfMethodCallIgnored"})
 public class Main extends Plugin implements Listener {
 
     private final File configFile = new File(getDataFolder(), "config.yml");
@@ -51,33 +54,36 @@ public class Main extends Plugin implements Listener {
     }
 
     @EventHandler
-    public void onServerConnected(ServerConnectEvent event) {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);
+    public void onPluginMessage(PluginMessageEvent event) {
+        System.out.println(event.getTag());
+        if (!event.getTag().equals("bungee:security")) return;
 
-        try {
-            outputStream.writeUTF("verify");
-            outputStream.writeUTF(event.getPlayer().getUniqueId().toString());
-            outputStream.writeUTF(getSecret());
-        } catch (IOException exception) {
-            System.out.println(exception.getMessage());
+        ByteArrayDataInput dataInput = ByteStreams.newDataInput(event.getData());
+        if (!dataInput.readUTF().equals("request")) return;
+
+        UUID requested = UUID.fromString(dataInput.readUTF());
+
+        ProxiedPlayer target = getProxy().getPlayer(requested);
+        if (target != null && target.isConnected()) {
+            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);
+
+            try {
+                outputStream.writeUTF("verification");
+                outputStream.writeUTF(requested.toString());
+                outputStream.writeUTF(getSecret());
+            } catch (IOException exception) {
+                System.out.println(exception.getMessage());
+            }
+            target.sendData("bungee:security", byteArrayOutputStream.toByteArray());
+            target.getServer().sendData("bungee:security", byteArrayOutputStream.toByteArray());
+
+            getLogger().info("Send secret to player " + requested + " (" + target.getName() + ")!");
+        } else {
+            getLogger().severe("Received invalid verification request for an unknown player!");
+            getLogger().severe("Maybe one of your bukkit servers is getting hacked!");
+            getLogger().severe("UUID: " + requested);
         }
-        getLogger().info("Prepared secret message for \"" + event.getPlayer().getName() + "\"!");
-
-        getProxy().getScheduler().runAsync(this, () -> {
-            if (!event.getPlayer().isConnected()) return;
-
-            while (event.getPlayer().getServer().getInfo().equals(event.getTarget()))
-                try {
-                    Thread.sleep(50);
-                } catch (InterruptedException exception) {
-                    exception.printStackTrace();
-                }
-            event.getPlayer().sendData("bungee:security", byteArrayOutputStream.toByteArray());
-            event.getPlayer().getServer().sendData("bungee:security", byteArrayOutputStream.toByteArray());
-            getLogger().info("Send secret to player " + event.getPlayer().getUniqueId()
-                    + " (" + event.getPlayer().getName() + ")!");
-        });
     }
 
     private String getSecret() {

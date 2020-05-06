@@ -15,15 +15,17 @@ import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-@SuppressWarnings({"UnstableApiUsage", "NullableProblems"})
+@SuppressWarnings({"UnstableApiUsage"})
 public class Main extends JavaPlugin implements Listener, PluginMessageListener {
 
-    private final List<UUID> verifiedPlayers = new ArrayList<>();
     private final List<UUID> securedPlayers = new ArrayList<>();
 
     @Override
@@ -35,32 +37,53 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
             reloadConfig();
         }
 
+        Bukkit.getMessenger().registerOutgoingPluginChannel(this, "bungee:security");
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "bungee:security",
                 this);
         Bukkit.getPluginManager().registerEvents(this, this);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onJoin(PlayerLoginEvent event) {
+    public void onLogin(PlayerLoginEvent event) {
         Player player = event.getPlayer();
-        if (!verifiedPlayers.contains(player.getUniqueId())) {
-            securedPlayers.add(player.getUniqueId());
-            if (player.hasPotionEffect(PotionEffectType.BLINDNESS))
-                player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40,
-                        255, true, false));
+        securedPlayers.add(player.getUniqueId());
 
-            player.sendMessage("§7[§bVerification§7]§c Your connection ist being verified...");
+        if (player.hasPotionEffect(PotionEffectType.BLINDNESS))
+            player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40,
+                    255, true, false));
 
-            Bukkit.getScheduler().runTaskLater(this, () -> {
-                if (!player.isOnline()) return;
-                if (!securedPlayers.contains(player.getUniqueId())) return;
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            if (!securedPlayers.contains(player.getUniqueId())) return;
 
+            if (player.isOnline())
                 player.kickPlayer("§4Verification unsuccessful!");
-                getLogger().warning(player.getUniqueId() + " (" + player.getName() + ")" +
-                        " tried to connect without verification!");
-                getLogger().warning(event.getHostname() + " " + event.getRealAddress().getHostAddress());
-            }, 40);
+
+            getLogger().warning(player.getUniqueId() + " (" + player.getName() + ")" +
+                    " tried to connect without verification!");
+            getLogger().warning("Address: " + player.getAddress().getHostName()
+                    + " or " + player.getAddress().getAddress().getHostAddress());
+        }, 80);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);
+
+        try {
+            outputStream.writeUTF("request");
+            outputStream.writeUTF(event.getPlayer().getUniqueId().toString());
+        } catch (IOException exception) {
+            exception.printStackTrace();
         }
+
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            player.sendPluginMessage(this, "bungee:security", byteArrayOutputStream.toByteArray());
+            getLogger().info("Verification Request was send for " + player.getUniqueId() + " (" + player.getName() + ")!");
+            player.sendMessage("§7[§bVerification§7]§c Your connection ist being verified...");
+        }, 5);
     }
 
     @EventHandler
@@ -96,14 +119,13 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         securedPlayers.remove(event.getPlayer().getUniqueId());
-        verifiedPlayers.remove(event.getPlayer().getUniqueId());
     }
 
     @Override
     public void onPluginMessageReceived(String channel, Player player, byte[] message) {
         if (!channel.equals("bungee:security")) return;
         ByteArrayDataInput dataInput = ByteStreams.newDataInput(message);
-        if (!dataInput.readUTF().equals("verify")) return;
+        if (!dataInput.readUTF().equals("verification")) return;
 
         UUID verified = UUID.fromString(dataInput.readUTF());
         String secret = dataInput.readUTF();
@@ -114,8 +136,7 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
             securedPlayers.remove(verified);
             Objects.requireNonNull(Bukkit.getPlayer(verified))
                     .sendMessage("§7[§bVerification§7]§a Verification successful!");
-        } else if (!verifiedPlayers.contains(verified))
-            verifiedPlayers.add(verified);
+        }
     }
 
     private String getSecret() {
