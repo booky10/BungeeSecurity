@@ -14,9 +14,8 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
-@SuppressWarnings("ResultOfMethodCallIgnored")
+@SuppressWarnings({"ResultOfMethodCallIgnored", "BusyWait"})
 public class Main extends Plugin implements Listener {
 
     private final File configFile = new File(getDataFolder(), "config.yml");
@@ -65,14 +64,20 @@ public class Main extends Plugin implements Listener {
         }
         getLogger().info("Prepared secret message for \"" + event.getPlayer().getName() + "\"!");
 
-        getProxy().getScheduler().schedule(this, () -> {
+        getProxy().getScheduler().runAsync(this, () -> {
             if (!event.getPlayer().isConnected()) return;
 
+            while (event.getPlayer().getServer().getInfo().equals(event.getTarget()))
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException exception) {
+                    exception.printStackTrace();
+                }
             event.getPlayer().sendData("bungee:security", byteArrayOutputStream.toByteArray());
-            event.getPlayer().getServer().sendData("bungee:security",byteArrayOutputStream.toByteArray());
+            event.getPlayer().getServer().sendData("bungee:security", byteArrayOutputStream.toByteArray());
             getLogger().info("Send secret to player " + event.getPlayer().getUniqueId()
                     + " (" + event.getPlayer().getName() + ")!");
-        }, 1, TimeUnit.SECONDS);
+        });
     }
 
     private String getSecret() {
