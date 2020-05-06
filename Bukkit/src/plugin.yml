@@ -1,0 +1,5 @@
+---
+name: BungeeSecurity-Bukkit
+main: tk.t11e.bungeesecurity.bukkit.main.Main
+version: '1.0'
+author: booky10
