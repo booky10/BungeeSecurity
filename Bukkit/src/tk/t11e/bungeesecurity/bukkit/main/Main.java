@@ -45,9 +45,16 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
         Player player = event.getPlayer();
         if (!verifiedPlayers.contains(player.getUniqueId())) {
             securedPlayers.add(player.getUniqueId());
-            if (player.getPotionEffect(PotionEffectType.BLINDNESS) == null)
+            boolean hasBlindness = false;
+            for (PotionEffect potionEffect : player.getActivePotionEffects())
+                if (potionEffect.getType().equals(PotionEffectType.BLINDNESS)) {
+                    hasBlindness = true;
+                    break;
+                }
+            if (!hasBlindness)
                 player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40,
                         255, true, false));
+
             player.sendMessage("§7[§bVerification§7]§c Your connection ist being verified...");
 
             Bukkit.getScheduler().runTaskLater(this, () -> {
