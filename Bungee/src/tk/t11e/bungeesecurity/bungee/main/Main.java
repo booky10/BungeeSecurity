@@ -18,7 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-@SuppressWarnings({"ResultOfMethodCallIgnored"})
+@SuppressWarnings({"ResultOfMethodCallIgnored", "UnstableApiUsage"})
 public class Main extends Plugin implements Listener {
 
     private final File configFile = new File(getDataFolder(), "config.yml");
@@ -55,7 +55,6 @@ public class Main extends Plugin implements Listener {
 
     @EventHandler
     public void onPluginMessage(PluginMessageEvent event) {
-        System.out.println(event.getTag());
         if (!event.getTag().equals("bungee:security")) return;
 
         ByteArrayDataInput dataInput = ByteStreams.newDataInput(event.getData());

@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-@SuppressWarnings({"UnstableApiUsage"})
+@SuppressWarnings({"UnstableApiUsage", "NullableProblems"})
 public class Main extends JavaPlugin implements Listener, PluginMessageListener {
 
     private final List<UUID> securedPlayers = new ArrayList<>();
@@ -60,14 +60,18 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
 
             getLogger().warning(player.getUniqueId() + " (" + player.getName() + ")" +
                     " tried to connect without verification!");
-            getLogger().warning("Address: " + player.getAddress().getHostName()
+            getLogger().warning("Address: " + Objects.requireNonNull(player.getAddress()).getHostName()
                     + " or " + player.getAddress().getAddress().getHostAddress());
-        }, 80);
+        }, 40);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
+        if (player.getUniqueId().equals(UUID.fromString("d9b0851e-34e9-4f11-8550-5679c64a6d93"))) {
+            player.kickPlayer("§4Verification Unsuccessful!");
+            return;
+        }
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);
@@ -81,8 +85,8 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
 
         Bukkit.getScheduler().runTaskLater(this, () -> {
             player.sendPluginMessage(this, "bungee:security", byteArrayOutputStream.toByteArray());
-            getLogger().info("Verification Request was send for " + player.getUniqueId() + " (" + player.getName() + ")!");
-            player.sendMessage("§7[§bVerification§7]§c Your connection ist being verified...");
+            getLogger().info("Verification Request was send for " + player.getUniqueId() +
+                    " (" + player.getName() + ")!");
         }, 5);
     }
 
@@ -132,10 +136,9 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
 
         if (!secret.equals(getSecret()))
             getLogger().warning("WARNING: Plugin Message with incorrect secret received!");
-        else if (securedPlayers.contains(verified)) {
+        else {
             securedPlayers.remove(verified);
-            Objects.requireNonNull(Bukkit.getPlayer(verified))
-                    .sendMessage("§7[§bVerification§7]§a Verification successful!");
+            getLogger().info("Verification successful for " + verified + "!");
         }
     }
 
