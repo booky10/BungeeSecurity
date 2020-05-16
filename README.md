@@ -1,5 +1,8 @@
 # BungeeSecurity
 
+**I noticed, that somebody had the same idea as me.**
+**I dind't copy him, please don't think that. The link to his repository is [here](https://github.com/lucko/BungeeGuard).**
+
 A Bungee and Bukkit plugin, which secures your Bungeecord **FOREVER**!
 
 This Secures your BungeeCord system with very little performance impact.
