@@ -146,10 +146,6 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
         try {
             String tmp = dataInput.readUTF();
             decrypted = aes.decrypt(tmp, getKey());
-            System.out.println(tmp);
-            System.out.println(decrypted);
-            System.out.println(getKey());
-            System.out.println(getSecret());
         } catch (Exception exception) {
             getLogger().severe("Error decrypting data!");
         }
