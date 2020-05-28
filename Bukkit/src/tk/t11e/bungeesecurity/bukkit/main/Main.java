@@ -14,25 +14,33 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import tk.t11e.bungeesecurity.AES;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @SuppressWarnings({"UnstableApiUsage", "NullableProblems"})
 public class Main extends JavaPlugin implements Listener, PluginMessageListener {
 
-    private final List<UUID> securedPlayers = new ArrayList<>();
+    protected final List<UUID> securedPlayers = new ArrayList<>();
+    protected final HashMap<UUID, Integer> kickTasks = new HashMap<>();
 
     @Override
     public void onEnable() {
         saveConfig();
         if (!getConfig().contains("secret")) {
             getConfig().set("secret", UUID.randomUUID().toString());
+            saveConfig();
+            reloadConfig();
+        }
+        if (!getConfig().contains("key")) {
+            getConfig().set("key", UUID.randomUUID().toString());
             saveConfig();
             reloadConfig();
         }
@@ -52,26 +60,27 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
             player.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40,
                     255, true, false));
 
-        Bukkit.getScheduler().runTaskLater(this, () -> {
-            if (!securedPlayers.contains(player.getUniqueId())) return;
+        BukkitRunnable kickTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!securedPlayers.contains(player.getUniqueId())) cancel();
+                if (player.isOnline()) player.kickPlayer("§4Verification unsuccessful!");
 
-            if (player.isOnline())
-                player.kickPlayer("§4Verification unsuccessful!");
-
-            getLogger().warning(player.getUniqueId() + " (" + player.getName() + ")" +
-                    " tried to connect without verification!");
-            getLogger().warning("Address: " + Objects.requireNonNull(player.getAddress()).getHostName()
-                    + " or " + player.getAddress().getAddress().getHostAddress());
-        }, 40);
+                String addressName = event.getHostname();
+                String address = event.getAddress().toString();
+                String uuid = player.getUniqueId().toString();
+                String name = player.getName();
+                getLogger().warning(uuid + " (" + name + ") tried to connect without verification!");
+                getLogger().warning("Address: " + addressName + " or " + address);
+            }
+        };
+        kickTask.runTaskLater(this, 20 * 10/*seconds*/);
+        kickTasks.put(player.getUniqueId(), kickTask.getTaskId());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        if (player.getUniqueId().equals(UUID.fromString("d9b0851e-34e9-4f11-8550-5679c64a6d93"))) {
-            player.kickPlayer("§4Verification Unsuccessful!");
-            return;
-        }
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);
@@ -131,19 +140,45 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
         ByteArrayDataInput dataInput = ByteStreams.newDataInput(message);
         if (!dataInput.readUTF().equals("verification")) return;
 
+        AES aes = new AES();
         UUID verified = UUID.fromString(dataInput.readUTF());
-        String secret = dataInput.readUTF();
+        String decrypted = null;
+        try {
+            String tmp = dataInput.readUTF();
+            decrypted = aes.decrypt(tmp, getKey());
+            System.out.println(tmp);
+            System.out.println(decrypted);
+            System.out.println(getKey());
+            System.out.println(getSecret());
+        } catch (Exception exception) {
+            getLogger().severe("Error decrypting data!");
+        }
 
-        if (!secret.equals(getSecret()))
+        if (decrypted == null || !decrypted.equals(getSecret())) {
             getLogger().warning("WARNING: Plugin Message with incorrect secret received!");
-        else {
+            Player target = Bukkit.getPlayer(verified);
+            if (target == null)
+                getLogger().severe("Also, the \"verified\" player is not online!");
+            else
+                target.kickPlayer("§4Verification unsuccessful!");
+        } else if (kickTasks.containsKey(verified)) {
+            Bukkit.getScheduler().cancelTask(kickTasks.get(verified));
+            kickTasks.remove(verified);
             securedPlayers.remove(verified);
             getLogger().info("Verification successful for " + verified + "!");
+        } else {
+            getLogger().severe("Received Verification for unknown player!");
+            getLogger().severe("Please look in your BungeeCord Console!");
         }
     }
 
-    private String getSecret() {
+    protected String getSecret() {
         reloadConfig();
         return getConfig().getString("secret");
+    }
+
+    protected String getKey() {
+        reloadConfig();
+        return getConfig().getString("key");
     }
 }

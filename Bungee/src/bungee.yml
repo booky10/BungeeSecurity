@@ -1,5 +1,7 @@
 ---
 name: BungeeSecurity-Bungee
 main: tk.t11e.bungeesecurity.bungee.main.Main
-version: '2.1'
+version: '2.2'
 author: booky10
+prefix: BungeeSecurity
+website: https://www.spigotmc.org/resources/78429/

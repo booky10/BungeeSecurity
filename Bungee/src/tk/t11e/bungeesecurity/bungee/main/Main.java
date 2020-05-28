@@ -11,6 +11,7 @@ import net.md_5.bungee.config.Configuration;
 import net.md_5.bungee.config.ConfigurationProvider;
 import net.md_5.bungee.config.YamlConfiguration;
 import net.md_5.bungee.event.EventHandler;
+import tk.t11e.bungeesecurity.AES;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -48,6 +49,16 @@ public class Main extends Plugin implements Listener {
                 return;
             }
         }
+        if (!config.contains("key")) {
+            config.set("key", UUID.randomUUID().toString());
+            try {
+                ConfigurationProvider.getProvider(YamlConfiguration.class).save(config, configFile);
+            } catch (IOException exception) {
+                getLogger().severe("Error while saving default key!");
+                getLogger().severe(exception.toString());
+                return;
+            }
+        }
 
         getProxy().registerChannel("bungee:security");
         getProxy().getPluginManager().registerListener(this, this);
@@ -66,13 +77,17 @@ public class Main extends Plugin implements Listener {
         if (target != null && target.isConnected()) {
             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
             DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);
+            AES aes = new AES();
 
             try {
                 outputStream.writeUTF("verification");
                 outputStream.writeUTF(requested.toString());
-                outputStream.writeUTF(getSecret());
+                outputStream.writeUTF(aes.encrypt(getSecret(), getKey()));
             } catch (IOException exception) {
-                System.out.println(exception.getMessage());
+                getLogger().severe("Error while writing plugin message!");
+            } catch (Exception exception) {
+                getLogger().severe("An Error happened, while encrypting secret!");
+                return;
             }
             target.sendData("bungee:security", byteArrayOutputStream.toByteArray());
             target.getServer().sendData("bungee:security", byteArrayOutputStream.toByteArray());
@@ -80,12 +95,12 @@ public class Main extends Plugin implements Listener {
             getLogger().info("Send secret to player " + requested + " (" + target.getName() + ")!");
         } else {
             getLogger().severe("Received invalid verification request for an unknown player!");
-            getLogger().severe("Maybe one of your bukkit servers is getting hacked!");
+            getLogger().severe("Maybe one of your bukkit servers is getting cracked!");
             getLogger().severe("UUID: " + requested);
         }
     }
 
-    private String getSecret() {
+    protected String getSecret() {
         try {
             config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
         } catch (IOException exception) {
@@ -93,5 +108,15 @@ public class Main extends Plugin implements Listener {
             getLogger().severe(exception.toString());
         }
         return config.getString("secret");
+    }
+
+    protected String getKey() {
+        try {
+            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
+        } catch (IOException exception) {
+            getLogger().severe("Error while reloading \"config.yml\"!");
+            getLogger().severe(exception.toString());
+        }
+        return config.getString("key");
     }
 }
