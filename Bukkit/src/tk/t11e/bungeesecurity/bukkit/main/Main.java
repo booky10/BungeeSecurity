@@ -34,16 +34,12 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
     @Override
     public void onEnable() {
         saveConfig();
-        if (!getConfig().contains("secret")) {
-            getConfig().set("secret", UUID.randomUUID().toString());
-            saveConfig();
-            reloadConfig();
-        }
-        if (!getConfig().contains("key")) {
-            getConfig().set("key", UUID.randomUUID().toString());
-            saveConfig();
-            reloadConfig();
-        }
+        if (!getConfig().contains("secret")) getConfig().set("secret", UUID.randomUUID().toString());
+        if (!getConfig().contains("key")) getConfig().set("key", UUID.randomUUID().toString());
+        if (!getConfig().contains("address.name")) getConfig().set("address.name", "0.0.0.0");
+        if (!getConfig().contains("address.enabled")) getConfig().set("address.enabled", false);
+        saveConfig();
+        reloadConfig();
 
         Bukkit.getMessenger().registerOutgoingPluginChannel(this, "bungee:security");
         Bukkit.getMessenger().registerIncomingPluginChannel(this, "bungee:security",
@@ -54,6 +50,14 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onLogin(PlayerLoginEvent event) {
         Player player = event.getPlayer();
+        if (getConfig().getBoolean("address.enabled"))
+            if (!event.getRealAddress().toString().equals(getConfig().getString("address.name"))) {
+                event.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§4Verification unsuccessful!");
+                getLogger().warning(player.getUniqueId() + " (" + player.getName() + ") is not Verified!");
+                getLogger().warning(String.format("Real Address: %s, Address: %s, Hostname: %s",
+                        event.getRealAddress(), event.getAddress(), event.getHostname()));
+            } else
+                getLogger().info(player.getUniqueId() + " (" + player.getName() + ") is Address Verified!");
         securedPlayers.add(player.getUniqueId());
 
         if (player.hasPotionEffect(PotionEffectType.BLINDNESS))
@@ -66,12 +70,9 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
                 if (!securedPlayers.contains(player.getUniqueId())) cancel();
                 if (player.isOnline()) player.kickPlayer("§4Verification unsuccessful!");
 
-                String addressName = event.getHostname();
-                String address = event.getAddress().toString();
-                String uuid = player.getUniqueId().toString();
-                String name = player.getName();
-                getLogger().warning(uuid + " (" + name + ") tried to connect without verification!");
-                getLogger().warning("Address: " + addressName + " or " + address);
+                getLogger().warning(player.getUniqueId() + " (" + player.getName() + ") is not Verified!");
+                getLogger().warning(String.format("Real Address: %s, Address: %s, Hostname: %s",
+                        event.getRealAddress(), event.getAddress(), event.getHostname()));
             }
         };
         kickTask.runTaskLater(this, 20 * 10/*seconds*/);
@@ -144,8 +145,7 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
         UUID verified = UUID.fromString(dataInput.readUTF());
         String decrypted = null;
         try {
-            String tmp = dataInput.readUTF();
-            decrypted = aes.decrypt(tmp, getKey());
+            decrypted = aes.decrypt(dataInput.readUTF(), getKey());
         } catch (Exception exception) {
             getLogger().severe("Error decrypting data!");
         }
