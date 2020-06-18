@@ -62,7 +62,7 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
                         event.getRealAddress(), event.getAddress(), event.getHostname()));
                 return;
             } else
-                getLogger().info(player.getUniqueId() + " (" + player.getName() + ") is Address Verified!");
+                getLogger().info(player.getUniqueId() + " (" + player.getName() + ") is address verified!");
         securedPlayers.add(player.getUniqueId());
 
         if (player.hasPotionEffect(PotionEffectType.BLINDNESS))
@@ -75,7 +75,7 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
                 if (!securedPlayers.contains(player.getUniqueId())) cancel();
                 if (player.isOnline()) player.kickPlayer("§4Verification unsuccessful!");
 
-                getLogger().warning(player.getUniqueId() + " (" + player.getName() + ") is not Verified!");
+                getLogger().warning(player.getUniqueId() + " (" + player.getName() + ") is not verified!");
                 getLogger().warning(String.format("Real Address: %s, Address: %s, Hostname: %s",
                         event.getRealAddress(), event.getAddress(), event.getHostname()));
             }
@@ -100,7 +100,7 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
 
         Bukkit.getScheduler().runTaskLater(this, () -> {
             player.sendPluginMessage(this, "bungee:security", byteArrayOutputStream.toByteArray());
-            getLogger().info("Verification Request was send for " + player.getUniqueId() +
+            getLogger().info("Verification request was send for " + player.getUniqueId() +
                     " (" + player.getName() + ")!");
         }, 5);
     }
@@ -176,7 +176,7 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
             getLogger().info("Verification successful for " + verified + "!");
         } else {
             getLogger().severe("Received Verification for unknown player!");
-            getLogger().severe("Please look in your BungeeCord Console!");
+            getLogger().severe("Please look in your BungeeCord console!");
         }
     }
 
