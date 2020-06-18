@@ -1,6 +1,6 @@
 # BungeeSecurity
 
-A Bungee and Bukkit plugin, which secures your Bungeecord Network with AES encryption!
+A Bungee and Bukkit plugin, which secures your Bungeecord Network with AES encryption and the OnlyProxyJoin princible!
 
 This Secures your BungeeCord system with very little performance impact.
 You have to install the Bukkit version on your Bukkit server and the BungeeCord on your Bungeecord server.
