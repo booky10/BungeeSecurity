@@ -26,36 +26,41 @@ import java.util.List;
 import java.util.UUID;
 
 @SuppressWarnings({"UnstableApiUsage", "NullableProblems"})
-public class Main extends JavaPlugin implements Listener, PluginMessageListener {
+public final class Main extends JavaPlugin implements Listener, PluginMessageListener {
 
-    protected final List<UUID> securedPlayers = new ArrayList<>();
-    protected final HashMap<UUID, Integer> kickTasks = new HashMap<>();
+    private final List<UUID> securedPlayers = new ArrayList<>();
+    private final HashMap<UUID, Integer> kickTasks = new HashMap<>();
 
     @Override
-    public void onEnable() {
-        saveConfig();
+    public final void onEnable() {
         if (!getConfig().contains("secret")) getConfig().set("secret", UUID.randomUUID().toString());
         if (!getConfig().contains("key")) getConfig().set("key", UUID.randomUUID().toString());
         if (!getConfig().contains("address.name")) getConfig().set("address.name", "0.0.0.0");
         if (!getConfig().contains("address.enabled")) getConfig().set("address.enabled", false);
         saveConfig();
         reloadConfig();
+        register();
+    }
 
+    private void register() {
+        //Plugin Messages
         Bukkit.getMessenger().registerOutgoingPluginChannel(this, "bungee:security");
-        Bukkit.getMessenger().registerIncomingPluginChannel(this, "bungee:security",
-                this);
+        Bukkit.getMessenger().registerIncomingPluginChannel(this, "bungee:security", this);
+
+        //Listener
         Bukkit.getPluginManager().registerEvents(this, this);
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onLogin(PlayerLoginEvent event) {
+    public final void onLogin(PlayerLoginEvent event) {
         Player player = event.getPlayer();
         if (getConfig().getBoolean("address.enabled"))
-            if (!event.getRealAddress().toString().equals(getConfig().getString("address.name"))) {
+            if (!event.getRealAddress().toString().equals(getAddress())) {
                 event.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§4Verification unsuccessful!");
                 getLogger().warning(player.getUniqueId() + " (" + player.getName() + ") is not Verified!");
                 getLogger().warning(String.format("Real Address: %s, Address: %s, Hostname: %s",
                         event.getRealAddress(), event.getAddress(), event.getHostname()));
+                return;
             } else
                 getLogger().info(player.getUniqueId() + " (" + player.getName() + ") is Address Verified!");
         securedPlayers.add(player.getUniqueId());
@@ -80,7 +85,7 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
-    public void onJoin(PlayerJoinEvent event) {
+    public final void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
@@ -101,42 +106,49 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
     }
 
     @EventHandler
-    public void onChat(AsyncPlayerChatEvent event) {
+    public final void onChat(AsyncPlayerChatEvent event) {
         if (securedPlayers.contains(event.getPlayer().getUniqueId()))
             event.setCancelled(true);
     }
 
     @EventHandler
-    public void onCommand(PlayerCommandPreprocessEvent event) {
+    @SuppressWarnings("deprecation")
+    public final void onChat(PlayerChatEvent event) {
         if (securedPlayers.contains(event.getPlayer().getUniqueId()))
             event.setCancelled(true);
     }
 
     @EventHandler
-    public void onInteract(PlayerInteractEvent event) {
+    public final void onCommand(PlayerCommandPreprocessEvent event) {
         if (securedPlayers.contains(event.getPlayer().getUniqueId()))
             event.setCancelled(true);
     }
 
     @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
+    public final void onInteract(PlayerInteractEvent event) {
+        if (securedPlayers.contains(event.getPlayer().getUniqueId()))
+            event.setCancelled(true);
+    }
+
+    @EventHandler
+    public final void onInventoryClick(InventoryClickEvent event) {
         if (securedPlayers.contains(event.getWhoClicked().getUniqueId()))
             event.setCancelled(true);
     }
 
     @EventHandler
-    public void onMove(PlayerMoveEvent event) {
+    public final void onMove(PlayerMoveEvent event) {
         if (securedPlayers.contains(event.getPlayer().getUniqueId()))
             event.setCancelled(true);
     }
 
     @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
+    public final void onQuit(PlayerQuitEvent event) {
         securedPlayers.remove(event.getPlayer().getUniqueId());
     }
 
     @Override
-    public void onPluginMessageReceived(String channel, Player player, byte[] message) {
+    public final void onPluginMessageReceived(String channel, Player player, byte[] message) {
         if (!channel.equals("bungee:security")) return;
         ByteArrayDataInput dataInput = ByteStreams.newDataInput(message);
         if (!dataInput.readUTF().equals("verification")) return;
@@ -168,13 +180,19 @@ public class Main extends JavaPlugin implements Listener, PluginMessageListener 
         }
     }
 
-    protected String getSecret() {
+    private String getSecret() {
         reloadConfig();
         return getConfig().getString("secret");
     }
 
-    protected String getKey() {
+    private String getKey() {
         reloadConfig();
         return getConfig().getString("key");
+    }
+
+    private String getAddress() {
+        reloadConfig();
+        String address = getConfig().getString("address.name");
+        return address + "/" + address;
     }
 }

@@ -20,52 +20,65 @@ import java.io.IOException;
 import java.util.UUID;
 
 @SuppressWarnings({"ResultOfMethodCallIgnored", "UnstableApiUsage"})
-public class Main extends Plugin implements Listener {
+public final class Main extends Plugin implements Listener {
 
     private final File configFile = new File(getDataFolder(), "config.yml");
     private Configuration config;
+    private final ConfigurationProvider provider = ConfigurationProvider.getProvider(YamlConfiguration.class);
 
     @Override
-    public void onEnable() {
-        try {
-            if (!getDataFolder().exists())
-                getDataFolder().mkdirs();
-            if (!configFile.exists())
-                configFile.createNewFile();
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
-        } catch (IOException exception) {
-            getLogger().severe("Error while creating/loading \"config.yml\"!");
-            getLogger().severe(exception.toString());
-            return;
-        }
+    public final void onEnable() {
+        createConfig();
+        register();
+    }
 
-        if (!config.contains("secret")) {
-            config.set("secret", UUID.randomUUID().toString());
-            try {
-                ConfigurationProvider.getProvider(YamlConfiguration.class).save(config, configFile);
-            } catch (IOException exception) {
-                getLogger().severe("Error while saving default secret!");
-                getLogger().severe(exception.toString());
-                return;
-            }
-        }
-        if (!config.contains("key")) {
-            config.set("key", UUID.randomUUID().toString());
-            try {
-                ConfigurationProvider.getProvider(YamlConfiguration.class).save(config, configFile);
-            } catch (IOException exception) {
-                getLogger().severe("Error while saving default key!");
-                getLogger().severe(exception.toString());
-                return;
-            }
-        }
-
+    private void register() {
+        //Plugin Messages
         getProxy().registerChannel("bungee:security");
+
+        //Listener
         getProxy().getPluginManager().registerListener(this, this);
     }
 
+    private void createConfig() {
+        try {
+            //Creating config file/folder
+            if (!getDataFolder().exists()) getDataFolder().mkdirs();
+            if (!configFile.exists()) configFile.createNewFile();
+
+            //Initial loading
+            reloadConfig();
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        }
+
+        //Setting default values
+        if (!config.contains("secret")) config.set("secret", UUID.randomUUID().toString());
+        if (!config.contains("key")) config.set("key", UUID.randomUUID().toString());
+
+        //Save and reload
+        saveConfig();
+        reloadConfig();
+    }
+
+    private void saveConfig() {
+        try {
+            provider.save(config, configFile);
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    private void reloadConfig() {
+        try {
+            config = provider.load(configFile);
+        } catch (IOException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
     @EventHandler
-    public void onPluginMessage(PluginMessageEvent event) {
+    public final void onPluginMessage(PluginMessageEvent event) {
         if (!event.getTag().equals("bungee:security")) return;
 
         ByteArrayDataInput dataInput = ByteStreams.newDataInput(event.getData());
@@ -95,28 +108,24 @@ public class Main extends Plugin implements Listener {
             getLogger().info("Send secret to player " + requested + " (" + target.getName() + ")!");
         } else {
             getLogger().severe("Received invalid verification request for an unknown player!");
-            getLogger().severe("Maybe one of your bukkit servers is getting cracked!");
+            getLogger().severe("Maybe one of your bukkit servers is getting hacked!");
             getLogger().severe("UUID: " + requested);
         }
     }
 
-    protected String getSecret() {
-        try {
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
-        } catch (IOException exception) {
-            getLogger().severe("Error while reloading \"config.yml\"!");
-            getLogger().severe(exception.toString());
-        }
+    private String getSecret() {
+        //Reloading config
+        reloadConfig();
+
+        //Getting secret
         return config.getString("secret");
     }
 
-    protected String getKey() {
-        try {
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
-        } catch (IOException exception) {
-            getLogger().severe("Error while reloading \"config.yml\"!");
-            getLogger().severe(exception.toString());
-        }
+    private String getKey() {
+        //Reloading config
+        reloadConfig();
+
+        //Getting Key
         return config.getString("key");
     }
 }
