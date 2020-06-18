@@ -21,7 +21,9 @@ When a player connects to a server,
 the secret is send to the server, so that the
 server knows, that the player is connecting through
 the real proxy.
+
 **The "address" section is only available on your backend server!**
+
 If you want to use the "address" section, change "enabled" to "true" an reload or restart your server. If you join now, you can not join the server. Look in your console and find a message, that looks like this:
 ```
 Real Address: <address>, Address: <address>, Hostname: <address>
