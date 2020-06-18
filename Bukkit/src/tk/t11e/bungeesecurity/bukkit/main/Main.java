@@ -55,7 +55,7 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
     public final void onLogin(PlayerLoginEvent event) {
         Player player = event.getPlayer();
         if (getConfig().getBoolean("address.enabled"))
-            if (!event.getRealAddress().toString().equals(getAddress())) {
+            if (!isAddressValid(event.getRealAddress().toString())) {
                 event.disallow(PlayerLoginEvent.Result.KICK_OTHER, "§4Verification unsuccessful!");
                 getLogger().warning(player.getUniqueId() + " (" + player.getName() + ") is not Verified!");
                 getLogger().warning(String.format("Real Address: %s, Address: %s, Hostname: %s",
@@ -190,9 +190,9 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
         return getConfig().getString("key");
     }
 
-    private String getAddress() {
+    private Boolean isAddressValid(String address) {
         reloadConfig();
-        String address = getConfig().getString("address.name");
-        return address + "/" + address;
+        String configAddress = getConfig().getString("address.name");
+        return address.equals(configAddress) || address.equals(configAddress + "/" + configAddress);
     }
 }
