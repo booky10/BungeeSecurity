@@ -23,7 +23,9 @@ server knows, that the player is connecting through
 the real proxy.
 **The "address" section is only available on your backend server!**
 If you want to use the "address" section, change "enabled" to "true" an reload or restart your server. If you join now, you can not join the server. Look in your console and find a message, that looks like this:
-`Real Address: <address>, Address: <address>, Hostname: <address>`
+```
+Real Address: <address>, Address: <address>, Hostname: <address>
+```
 Then put in the "name" field of the "address" section the address, that is labeled with "Real Address". When you reload/restart you server now, you should no longer be kicked.
 
 If you find any issues, create an issue [here](https://github.com/booky10/BungeeSecurity/issues), don't leave a negative review!
