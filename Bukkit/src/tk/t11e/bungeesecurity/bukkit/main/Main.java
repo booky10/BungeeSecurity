@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -106,45 +107,58 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
     }
 
     @EventHandler
-    public final void onChat(AsyncPlayerChatEvent event) {
-        if (securedPlayers.contains(event.getPlayer().getUniqueId()))
-            event.setCancelled(true);
+    public final void onAsyncChat(AsyncPlayerChatEvent event) {
+        if (!securedPlayers.contains(event.getPlayer().getUniqueId())) return;
+
+        event.setCancelled(true);
     }
 
     @EventHandler
     @SuppressWarnings("deprecation")
     public final void onChat(PlayerChatEvent event) {
-        if (securedPlayers.contains(event.getPlayer().getUniqueId()))
-            event.setCancelled(true);
+        if (!securedPlayers.contains(event.getPlayer().getUniqueId())) return;
+
+        event.setCancelled(true);
     }
 
     @EventHandler
     public final void onCommand(PlayerCommandPreprocessEvent event) {
-        if (securedPlayers.contains(event.getPlayer().getUniqueId()))
-            event.setCancelled(true);
+        if (!securedPlayers.contains(event.getPlayer().getUniqueId())) return;
+
+        event.setCancelled(true);
     }
 
     @EventHandler
     public final void onInteract(PlayerInteractEvent event) {
-        if (securedPlayers.contains(event.getPlayer().getUniqueId()))
-            event.setCancelled(true);
+        if (!securedPlayers.contains(event.getPlayer().getUniqueId())) return;
+
+        event.setCancelled(true);
     }
 
     @EventHandler
     public final void onInventoryClick(InventoryClickEvent event) {
-        if (securedPlayers.contains(event.getWhoClicked().getUniqueId()))
-            event.setCancelled(true);
+        if (!securedPlayers.contains(event.getWhoClicked().getUniqueId())) return;
+
+        event.setCancelled(true);
     }
 
     @EventHandler
     public final void onMove(PlayerMoveEvent event) {
-        if (securedPlayers.contains(event.getPlayer().getUniqueId()))
-            event.setCancelled(true);
+        if (!securedPlayers.contains(event.getPlayer().getUniqueId())) return;
+
+        event.setCancelled(true);
     }
 
     @EventHandler
     public final void onQuit(PlayerQuitEvent event) {
         securedPlayers.remove(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public final void onDamage(EntityDamageEvent event) {
+        if (!securedPlayers.contains(event.getEntity().getUniqueId())) return;
+
+        event.setCancelled(true);
     }
 
     @Override
@@ -193,6 +207,8 @@ public final class Main extends JavaPlugin implements Listener, PluginMessageLis
     private Boolean isAddressValid(String address) {
         reloadConfig();
         String configAddress = getConfig().getString("address.name");
-        return address.equals(configAddress) || address.equals(configAddress + "/" + configAddress);
+        return address.equals("/" + configAddress)
+                || address.equals(configAddress + "/" + configAddress)
+                || address.equals(configAddress);
     }
 }
